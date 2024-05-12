@@ -3,6 +3,7 @@ import os
 import csv
 from datetime import datetime
 import cv2
+import numpy as np
 from inference import InferencePipeline
 from inference.core.interfaces.stream.sinks import render_boxes
 from inference.core.interfaces.camera.entities import VideoFrame
@@ -14,6 +15,8 @@ key: str = os.environ.get("SUPABASE_KEY")
 supabase: Client = create_client(url, key)
 
 annotator = sv.BoxAnnotator()
+
+trajectory = []
 
 def my_custom_sink(predictions: dict, video_frame: VideoFrame):
     # labels for each prediction
@@ -42,10 +45,13 @@ def my_custom_sink(predictions: dict, video_frame: VideoFrame):
                     }
                 ]
             ).execute()
+            trajectory.append((data["x"], data["y"]))
+    for i in range(1, len(trajectory)):
+        cv2.line(image, (int(trajectory[i-1][0]), int(trajectory[i-1][1])), (int(trajectory[i][0]), int(trajectory[i][1])), (0, 255, 0), 2)
     # save the annotated image to a file
     cv2.imwrite("annotated.jpg", image)
-    # display the annotated image
-    cv2.imshow("Predictions", image)
+    # # display the annotated image
+    # cv2.imshow("Predictions", image)
     cv2.waitKey(1)
 
 # Initialize inference pipeline
