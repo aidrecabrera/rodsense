@@ -20,7 +20,7 @@ trajectory = []
 
 def my_custom_sink(predictions: dict, video_frame: VideoFrame):
     # labels for each prediction
-    labels = [f"Detected: {p['class']}, X: {p['x']}, Y: {p['y']}" for p in predictions["predictions"]]
+    labels = [f"Detected: {p['class']}, X: {p['x']}, Y: {p['y']}, id: {p['detection_id']}" for p in predictions["predictions"]]
     # load our predictions into the supervision detections object
     detections = sv.Detections.from_inference(predictions)
     image = annotator.annotate(
@@ -45,13 +45,14 @@ def my_custom_sink(predictions: dict, video_frame: VideoFrame):
                     }
                 ]
             ).execute()
-            trajectory.append((data["x"], data["y"]))
+            if data["confidence"] > 0.75:
+                trajectory.append((data["x"], data["y"]))
     for i in range(1, len(trajectory)):
         cv2.line(image, (int(trajectory[i-1][0]), int(trajectory[i-1][1])), (int(trajectory[i][0]), int(trajectory[i][1])), (0, 255, 0), 2)
     # save the annotated image to a file
     cv2.imwrite("annotated.jpg", image)
-    # # display the annotated image
-    # cv2.imshow("Predictions", image)
+    # display the annotated image
+    cv2.imshow("Predictions", image)
     cv2.waitKey(1)
 
 # Initialize inference pipeline

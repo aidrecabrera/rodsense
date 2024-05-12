@@ -16,7 +16,7 @@ supabase: Client = create_client(url, key)
 
 annotator = sv.BoxAnnotator()
 
-trajectories = {}
+trajectory = {}
 
 def my_custom_sink(predictions: dict, video_frame: VideoFrame):
     # labels for each prediction
@@ -32,7 +32,11 @@ def my_custom_sink(predictions: dict, video_frame: VideoFrame):
     else:
         # save data to supabase database
         for data in predictions["predictions"]:
-            detection_id = data["detection_id"]
+            # Use a tuple of class and rounded coordinates as a key to distinguish different objects
+            key = (data['class'], round(data['x']), round(data['y']))
+            if key not in trajectory:
+                trajectory[key] = []
+            trajectory[key].append((data["x"], data["y"]))
             supabase.table("detections").insert(
                 [
                     {
@@ -46,12 +50,13 @@ def my_custom_sink(predictions: dict, video_frame: VideoFrame):
                     }
                 ]
             ).execute()
-            trajectories[detection_id] = []
-            trajectories[detection_id].append((data["x"], data["y"]))
-            # Draw trajectory for the current detection
-            trajectory = trajectories[detection_id]
-            for i in range(1, len(trajectory)):
-                cv2.line(image, (int(trajectory[i-1][0]), int(trajectory[i-1][1])), (int(trajectory[i][0]), int(trajectory[i][1])), (0, 255, 0), 2)
+    
+    for traj in trajectory.values():
+        for i in range(1, len(traj)):
+            cv2.line(image, (int(traj[i-1][0]), int(traj[i-1][1])), 
+                     (int(traj[i][0]), int(traj[i][1])), 
+                     (0, 255, 0), 2)
+    
     # save the annotated image to a file
     cv2.imwrite("annotated.jpg", image)
     # display the annotated image
